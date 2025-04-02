@@ -2,5 +2,6 @@
 !/Browser/html/fortesting.html
 /Browser/bin
 /Browser/obj
+/Browser/resources
 
 .idea/

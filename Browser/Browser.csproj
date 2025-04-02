@@ -11,10 +11,11 @@
     <ItemGroup>
       <PackageReference Include="HtmlAgilityPack" Version="1.11.57" />
       <PackageReference Include="HtmlAgilityPack.CssSelectors" Version="1.0.2" />
+      <PackageReference Include="Jint" Version="4.2.1" />
       <PackageReference Include="SkiaSharp" Version="2.88.6" />
       <PackageReference Include="SkiaSharp.Views" Version="2.88.6" />
-      <PackageReference Include="SkiaSharp.Views.Forms" Version="2.88.6" />
-      <PackageReference Include="SkiaSharp.Views.Forms.WPF" Version="2.88.6" />
+<!--      <PackageReference Include="SkiaSharp.Views.Forms" Version="2.88.6" />-->
+<!--      <PackageReference Include="SkiaSharp.Views.Forms.WPF" Version="2.88.6" />-->
     </ItemGroup>
 
 

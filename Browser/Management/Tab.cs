@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Browser.CSS;
 using Browser.DOM;
+using Browser.JS;
 using Browser.Networking;
 using Browser.Render;
 using HtmlAgilityPack;
@@ -13,6 +14,8 @@ public class Tab
     public string location { get; }
     public HtmlDocument document { get; }
     public CssHtmlDocument cssDocument { get; }
+    
+    public JavaScriptEngine jsExecutor { get; }
     public Layout layout { get; private set; }
     public List<Resource> resources { get; set; }
     public Resource mainResource { get; }
@@ -22,6 +25,7 @@ public class Tab
 
     public Tab(Resource mainResource, Browser owner)
     {
+        
         this.mainResource = mainResource;
         this.owner = owner;
 
@@ -29,8 +33,6 @@ public class Tab
 
         document = new HtmlDocument();
         document.Load(mainResource.localPath);
-
-        cssDocument = new CssHtmlDocument(document);
 
         resources = ResourceUtil.FillResourcesWithLocation(ResourceUtil.GetResources(document), location);
         foreach (var t in resources)
@@ -45,7 +47,11 @@ public class Tab
                 Console.WriteLine($"Bad resource: {t}");
             }
         }
-
+        
+        jsExecutor = new JavaScriptEngine(document);
+        HandleJs();
+        
+        cssDocument = new CssHtmlDocument(document);
         HandleCss();
         
         layout = new Layout(owner.Options.viewport, cssDocument, this);
@@ -55,13 +61,58 @@ public class Tab
         // {
         //     Console.WriteLine(obj);
         // }
-        _renderer = new ObjectRenderer(this, layout.MakeRenderObjects(document.DocumentNode.SelectSingleNode("//body"), null));
-
+        _renderer = new ObjectRenderer(this, layout);
+        
     }
-    
+
+    public void HandleJs()
+    {
+        var jsNodes = document.DocumentNode.SelectNodes("//script[@src]|//script[not(@src)]");
+        if (jsNodes != null)
+        {
+            var jsToExecute = new List<string>();
+            var jsThreads = new List<JsThread>();
+            var counter = 0;
+            foreach (var node in jsNodes)
+            {
+                // внешний скрипт
+                if (node.Attributes["src"] != null)
+                {
+                    string scriptSrc = node.GetAttributeValue("src", "");
+                    var fileName = resources.First(res => scriptSrc.Equals(res.path)).localPath;
+                    if (fileName != null)
+                    {
+                        var thread = new JsThread(counter, fileName);
+                        thread.Start();
+                        jsThreads.Add(thread);
+                        jsToExecute.Add("");
+                    }
+                }
+                else
+                {
+                    // Встроенный скрипт (без src)
+                    string inlineScript = node.InnerHtml.Trim();
+                    jsToExecute.Add(inlineScript);
+                }
+
+                counter += 1;
+            }
+
+            foreach (var thread in jsThreads)
+            {
+                thread.Join();
+                jsToExecute[thread.Number] = thread.Content;
+            }
+
+            foreach (var jsCode in jsToExecute)
+            {
+                jsExecutor.ExecuteScript(jsCode);
+            }
+        }
+    }
+
     public void HandleCss()
     {
-        
         var cssNodes = document.DocumentNode.SelectNodes("//link[@rel='stylesheet']|//style");
         if (cssNodes != null)
         {
@@ -77,7 +128,7 @@ public class Tab
                     {
                         continue;
                     }
-                    var fileName = resources.First(x => link.Value.Equals(x.path)).localPath;
+                    var fileName = resources.First(res => link.Value.Equals(res.path)).localPath;
                     if (fileName == null)
                     {
                         continue;
@@ -201,4 +252,5 @@ public class Tab
         }
         
     }
+    
 }

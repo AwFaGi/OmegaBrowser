@@ -3,6 +3,7 @@ using Browser.Management;
 using Browser.Networking;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
+using Timer = Browser.Management.Timer;
 
 namespace Browser.Render;
 
@@ -15,21 +16,25 @@ public class ObjectRenderer
 
     private readonly Size browserSize = new(980, 500);
     
-    public ObjectRenderer(Tab tab, List<RenderObject> list)
+    public ObjectRenderer(Tab tab, Layout layout)
     {
         var form = new Form
         {
             ClientSize = browserSize,
             Text = "OmegaBrowser",
-            FormBorderStyle = FormBorderStyle.FixedDialog,
+            FormBorderStyle = FormBorderStyle.Fixed3D,
             MaximizeBox = false
         };
         
+        var renderObjects = layout.MakeRenderObjects(tab.document.DocumentNode.SelectSingleNode("//body"), null);
+        
         var skiaPanel = new SKControl();
-        skiaPanel.Height = list[0].Rectangle.Height();
+        skiaPanel.Height = renderObjects[0].Rectangle.Height();
         skiaPanel.Width = browserSize.Width - 20;
         skiaPanel.PaintSurface += (sender, e) =>
         {
+            Timer.start();
+
             var surface = e.Surface;
             var canvas = surface.Canvas;
             canvas.Clear(SKColor.Parse("#ffffff"));
@@ -39,7 +44,8 @@ public class ObjectRenderer
                 bufferBitmap = new SKBitmap(skiaPanel.Width, skiaPanel.Height);
                 bufferCanvas = new SKCanvas(bufferBitmap);
                 // Отрисовываем все объекты на буфере
-                this.DrawAllObjects(tab, list);
+                this.DrawAllObjects(tab, renderObjects);
+                Timer.end();
             }
 
             // Определяем видимую область
@@ -51,13 +57,18 @@ public class ObjectRenderer
     
             // Отображаем только видимую область из буфера
             canvas.DrawBitmap(bufferBitmap, visibleRect, defaultRect);
-            
+            // Timer.end();
         };
+        
+        var renderTimer = new System.Windows.Forms.Timer();
+        renderTimer.Interval = 100; // Интервал в миллисекундах (например, 100 мс для 10 FPS)
+        renderTimer.Tick += (sender, e) => skiaPanel.Invalidate();
+        renderTimer.Start();
         
         verticalScrollBar = new VScrollBar();
         verticalScrollBar.Dock = DockStyle.Right;
         verticalScrollBar.Width = 20;
-        verticalScrollBar.Maximum = list[0].Rectangle.Height() - (browserSize.Height - 100);
+        verticalScrollBar.Maximum = renderObjects[0].Rectangle.Height() - (browserSize.Height - 100);
         verticalScrollBar.SmallChange = 50; 
         verticalScrollBar.LargeChange = 100;
         verticalScrollBar.Scroll += (sender, e) =>
@@ -68,7 +79,6 @@ public class ObjectRenderer
         form.Controls.Add(skiaPanel);
         form.Controls.Add(verticalScrollBar);
         Application.Run(form);
-        
         
     }
     

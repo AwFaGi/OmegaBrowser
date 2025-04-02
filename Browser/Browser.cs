@@ -1,6 +1,7 @@
 using Browser.Management;
 using Browser.Management.TabCommands;
 using Browser.Networking;
+using Timer = Browser.Management.Timer;
 
 namespace Browser;
 
@@ -58,6 +59,7 @@ public class Browser //todo tab manager
         Console.WriteLine("Enter URL: ");
         var url = Console.ReadLine();
 
+        Timer.start();
         currentTab = LoadTab(url);
         
         // Console.WriteLine("What should I do? I can:");
@@ -91,7 +93,7 @@ public class Browser //todo tab manager
         //         }
         //     }
         // } while (!string.Equals(userInput, "quit", StringComparison.Ordinal));
-        
+        //
         Console.WriteLine("Shutdown...");
 
     }

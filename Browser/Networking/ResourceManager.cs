@@ -14,6 +14,12 @@ public class ResourceManager
     {
         using var client = new HttpClient();
 
+        client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+        client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+        client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9,ru;q=0.8");
+        // client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
+        client.DefaultRequestHeaders.Add("Connection", "keep-alive");
+        
         try
         {
             var response = client.GetAsync(url).Result;
@@ -26,7 +32,7 @@ public class ResourceManager
             }
             else
             {
-                Console.Error.WriteLine($"Bad Url: {url}"); //todo include in logger
+                Console.Error.WriteLine($"Bad Url: {url}; {(int)response.StatusCode}, {response.ReasonPhrase}"); //todo include in logger
                 return false;
             }
         }

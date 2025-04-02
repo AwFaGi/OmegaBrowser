@@ -527,7 +527,9 @@ public class Layout
     
     private ImageObject MakeImage(HtmlNode node, string path, RenderObject parentObject, RenderObject? sibling)
     {
-        var fileName = tab.resources.First(x => path.Equals(x.path)).localPath;
+        var resource = tab.resources.First(x => path.Equals(x.path));
+        var fileName = resource.localPath;
+        var isGif = Path.GetExtension(resource.path).ToLower() == ".gif";
         var imageHeight = 0;
         var imageWidth = 0;
         if (fileName != null)
