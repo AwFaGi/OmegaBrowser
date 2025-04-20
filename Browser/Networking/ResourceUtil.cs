@@ -42,7 +42,7 @@ public class ResourceUtil
                     (
                         from style in cssNodes
                         from styleAttribute in style.Attributes
-                        where styleAttribute.Name == "href"
+                        where styleAttribute.Name is "href" or "data-href"
                         select styleAttribute.Value
                     ).Select(
                         resource => new Resource(resource, Resource.ResourceType.Css)

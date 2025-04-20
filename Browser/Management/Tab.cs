@@ -5,6 +5,7 @@ using Browser.JS;
 using Browser.Networking;
 using Browser.Render;
 using HtmlAgilityPack;
+using SkiaSharp.Views.Desktop;
 using HtmlDocument = HtmlAgilityPack.HtmlDocument;
 
 namespace Browser.Management;
@@ -22,8 +23,10 @@ public class Tab
     public Browser owner { get; }
 
     private ObjectRenderer _renderer;
+    
+    public SKControl proxyPanel { get; private set; }
 
-    public Tab(Resource mainResource, Browser owner)
+    public Tab(Resource mainResource, Browser owner, SKControl renderPanel)
     {
         
         this.mainResource = mainResource;
@@ -61,7 +64,13 @@ public class Tab
         // {
         //     Console.WriteLine(obj);
         // }
-        _renderer = new ObjectRenderer(this, layout);
+        proxyPanel = new SKControl()
+        {
+            Width = renderPanel.Width,
+            Height = renderPanel.Height,
+            Top = 0
+        };
+        _renderer = new ObjectRenderer(this, layout, proxyPanel);
         
     }
 
@@ -123,7 +132,7 @@ public class Tab
                 
                 if (node.Name == "link")
                 {
-                    var link = node.Attributes.First(attribute => attribute.Name == "href");
+                    var link = node.Attributes.First(attribute => (attribute.Name == "href" || attribute.Name == "data-href"));
                     if (link == null)
                     {
                         continue;

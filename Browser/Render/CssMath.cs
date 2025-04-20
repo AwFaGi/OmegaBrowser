@@ -52,7 +52,7 @@ public class CssMath
             text = "0" + text;
         }
 
-        var symbols = text[^2..];
+        var symbols = text.Length >= 2? text[^2..] : "";
 
         return symbols switch
         {

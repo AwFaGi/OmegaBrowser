@@ -309,6 +309,7 @@ public class CssHtmlDocument
                 attrMap.getMap().Add("display", "block");
                 break;
             case "noscript":
+                attrMap.getMap().Add("display", "none");
                 break;
             case "object:focus":
                 attrMap.getMap().Add("outline", "none");

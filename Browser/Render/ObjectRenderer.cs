@@ -10,76 +10,79 @@ namespace Browser.Render;
 public class ObjectRenderer
 {
     private VScrollBar verticalScrollBar;
-
     private SKBitmap bufferBitmap;
     private SKCanvas bufferCanvas;
-
-    private readonly Size browserSize = new(980, 500);
+    private readonly Size browserSize;
+    private List<LinkInfo> _linkInfos = [];
     
-    public ObjectRenderer(Tab tab, Layout layout)
+    public ObjectRenderer(Tab tab, Layout layout, SKControl parentPanel)
     {
-        var form = new Form
-        {
-            ClientSize = browserSize,
-            Text = "OmegaBrowser",
-            FormBorderStyle = FormBorderStyle.Fixed3D,
-            MaximizeBox = false
-        };
+        browserSize = new(parentPanel.Width, parentPanel.Height);
         
         var renderObjects = layout.MakeRenderObjects(tab.document.DocumentNode.SelectSingleNode("//body"), null);
+
+        var renderPanel = new SKControl()
+        {
+            Height = parentPanel.Height,
+            Width = parentPanel.Width
+        };
         
-        var skiaPanel = new SKControl();
-        skiaPanel.Height = renderObjects[0].Rectangle.Height();
-        skiaPanel.Width = browserSize.Width - 20;
-        skiaPanel.PaintSurface += (sender, e) =>
+        var pageRenderPanel = new SKControl();
+        pageRenderPanel.Height = renderObjects[0].Rectangle.Height();
+        pageRenderPanel.Width = parentPanel.Width - 20;
+        pageRenderPanel.PaintSurface += (sender, e) =>
         {
             Timer.start();
-
             var surface = e.Surface;
             var canvas = surface.Canvas;
             canvas.Clear(SKColor.Parse("#ffffff"));
+            
             if (bufferBitmap == null)
             {
-                // Инициализируем буферный холст и его канвас
-                bufferBitmap = new SKBitmap(skiaPanel.Width, skiaPanel.Height);
+                bufferBitmap = new SKBitmap(pageRenderPanel.Width, pageRenderPanel.Height);
                 bufferCanvas = new SKCanvas(bufferBitmap);
-                // Отрисовываем все объекты на буфере
                 this.DrawAllObjects(tab, renderObjects);
                 Timer.end();
             }
 
-            // Определяем видимую область
             var visibleRect = new SKRectI(0, verticalScrollBar.Value, 
-                skiaPanel.Width, browserSize.Height+verticalScrollBar.Value);
+                pageRenderPanel.Width, browserSize.Height+verticalScrollBar.Value);
             
             var defaultRect = new SKRectI(0, 0, 
-                skiaPanel.Width, browserSize.Height);
+                pageRenderPanel.Width, browserSize.Height);
     
-            // Отображаем только видимую область из буфера
             canvas.DrawBitmap(bufferBitmap, visibleRect, defaultRect);
-            // Timer.end();
+        };
+        
+        pageRenderPanel.MouseClick += (sender, e) =>
+        {
+            float clickX = e.X;
+            float clickY = e.Y + verticalScrollBar.Value; // Учитываем прокрутку
+
+            foreach (var link in _linkInfos.Where(link => link.Bounds.Contains(clickX, clickY)))
+            {
+                Console.WriteLine($"Clicked on {link.Url}");
+            }
         };
         
         var renderTimer = new System.Windows.Forms.Timer();
-        renderTimer.Interval = 100; // Интервал в миллисекундах (например, 100 мс для 10 FPS)
-        renderTimer.Tick += (sender, e) => skiaPanel.Invalidate();
+        renderTimer.Interval = 100;
+        renderTimer.Tick += (sender, e) => pageRenderPanel.Invalidate();
         renderTimer.Start();
         
         verticalScrollBar = new VScrollBar();
         verticalScrollBar.Dock = DockStyle.Right;
         verticalScrollBar.Width = 20;
-        verticalScrollBar.Maximum = renderObjects[0].Rectangle.Height() - (browserSize.Height - 100);
+        verticalScrollBar.Height = parentPanel.Height;
+        verticalScrollBar.Top = parentPanel.Top;
+        verticalScrollBar.Maximum = renderObjects[0].Rectangle.Height() - (browserSize.Height - 125);
         verticalScrollBar.SmallChange = 50; 
         verticalScrollBar.LargeChange = 100;
-        verticalScrollBar.Scroll += (sender, e) =>
-        {
-            skiaPanel.Invalidate();
-        };
+        verticalScrollBar.Scroll += (sender, e) => pageRenderPanel.Invalidate();
         
-        form.Controls.Add(skiaPanel);
-        form.Controls.Add(verticalScrollBar);
-        Application.Run(form);
-        
+        renderPanel.Controls.Add(pageRenderPanel);
+        renderPanel.Controls.Add(verticalScrollBar);
+        parentPanel.Controls.Add(renderPanel);
     }
     
     private void DrawAllObjects(Tab tab, List<RenderObject> list)
@@ -143,16 +146,20 @@ public class ObjectRenderer
             TextSize = textSize,
             IsAntialias = true,
             Typeface = SKTypeface.FromFamilyName("Times New Roman")
-        };;
+        };
         p.Color = color;
         bufferCanvas.DrawText(text,rect.left,rect.bottom, p);
 
         if (under)
         {
             float lineY = rect.bottom + 2.0f;
-
             bufferCanvas.DrawLine(rect.left, lineY, rect.right, lineY, p);
         }
+    }
+
+    public void addLink(LinkInfo linkInfo)
+    {
+        _linkInfos.Add(linkInfo);
     }
 
     public void drawImage(float x, float y, string path)

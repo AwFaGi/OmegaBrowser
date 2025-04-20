@@ -176,9 +176,10 @@ public class Layout
                     }
                     else
                     {
-                        if (ll.Count > 0)
+                        if (ll.Count > 0) //todo return max
                         {
-                            elem.Rectangle.bottom = ll[^1].Rectangle.bottom;
+                            elem.Rectangle.bottom = ll.Max(x => x.Rectangle.bottom);
+                            // elem.Rectangle.bottom = Math.Max(ll[0].Rectangle.bottom, ll[^1].Rectangle.bottom);
                         }
                     }
                     
@@ -199,15 +200,89 @@ public class Layout
                     out var paddingLeft, out var paddingRight, out var paddingTop, out var paddingBottom);
 
                 elem.Rectangle.bottom += marginBottom + paddingBottom;
+
+                if (node.Name == "a")
+                {
+                    var link = new LinkObject(node.Attributes["href"]?.Value ?? "")
+                    {
+                        Rectangle = elem.Rectangle
+                    };
+                    list.Add(link);
+                }
+                
                 list.Add(elem);
                 list.AddRange(localList);
                 return list;
             }
             
-            // case "flex":
-            // {
-            //     break;
-            // }
+            case "flex":
+            {
+                var elem = MakeBlock(node, parentObject, sibling);
+                DoBackground(elem);
+                var localList = new List<RenderObject>();
+
+                var children = new List<RenderObject>();
+
+                int xCursor = elem.Rectangle.left;
+                int yCursor = elem.Rectangle.top;
+                int rowHeight = 0;
+
+                document.GetMap()[node].getMap().TryGetValue("justify-content", out var justifyContent);
+                document.GetMap()[node].getMap().TryGetValue("align-items", out var alignItems);
+                document.GetMap()[node].getMap().TryGetValue("flex-direction", out var flexDirection);
+    
+                bool isRow = flexDirection is null or "row"; // default is 'row'
+    
+                foreach (var childNode in node.ChildNodes)
+                {
+                    var childRenderObjects = MakeRenderObjects(childNode, elem);
+
+                    foreach (var child in childRenderObjects)
+                    {
+                        localList.Add(child);
+                        children.Add(child);
+
+                        var rect = child.Rectangle;
+
+                        if (isRow)
+                        {
+                            rect.left = xCursor;
+                            rect.top = yCursor;
+                            rect.bottom = yCursor + rect.Height();
+                            rect.right = xCursor + rect.Width();
+
+                            xCursor += rect.Width();
+                            rowHeight = Math.Max(rowHeight, rect.Height());
+                        }
+                        else
+                        {
+                            rect.left = xCursor;
+                            rect.top = yCursor;
+                            rect.bottom = rect.top + rect.Height();
+                            rect.right = rect.left + rect.Width();
+
+                            yCursor += rect.Height();
+                        }
+
+                        child.Rectangle = rect;
+                    }
+                }
+
+                if (isRow)
+                {
+                    elem.Rectangle.right = xCursor;
+                    elem.Rectangle.bottom = yCursor + rowHeight;
+                }
+                else
+                {
+                    elem.Rectangle.right = children.Max(c => c.Rectangle.right);
+                    elem.Rectangle.bottom = yCursor;
+                }
+
+                list.Add(elem);
+                list.AddRange(localList);
+                return list;
+            }
             
             case null:
             case "inline":
@@ -258,6 +333,15 @@ public class Layout
                     
                 }
             
+                if (node.Name == "a")
+                {
+                    var link = new LinkObject(node.Attributes["href"]?.Value ?? "")
+                    {
+                        Rectangle = elem.Rectangle
+                    };
+                    list.Add(link);
+                }
+                
                 list.Add(elem);
                 list.AddRange(localList);
                 return list;
@@ -288,9 +372,6 @@ public class Layout
         
             if (match.Success)
             {
-
-                
-                
                 string url = match.Groups[1].Value;
                 Resource res = new Resource(url, Resource.ResourceType.Img);
                             
@@ -318,7 +399,8 @@ public class Layout
             }
             catch (Exception exception)
             {
-                Console.WriteLine(exception);
+                obj.BackgroundObjects.Add(new RenderObjectSolidColorBackground(new SKColor(0,0,0,0)));
+                // Console.WriteLine(exception);
             }
         }
         else
@@ -332,6 +414,7 @@ public class Layout
         var elem = new RenderObject
         {
             Map = document.GetMap()[node],
+            HtmlNode = node,
             ObjectType = RenderObjectType.Inline
         };
 
@@ -376,6 +459,7 @@ public class Layout
         var elem = new RenderObject
         {
             Map = document.GetMap()[node],
+            HtmlNode = node,
             ObjectType = RenderObjectType.Block
         };
 
@@ -477,7 +561,8 @@ public class Layout
                 
                 var rect = new Rect();
 
-                var dopLength = 4 * (text.Length - text.Trim().Length);
+                // var dopLength = 4 * (text.Length - text.Trim().Length);
+                var dopLength = 0;
                 
                 rect.left = parentObject.Rectangle.left + paddingLeft + marginLeft;
                 rect.right = rect.left + (int)size.Width + paddingRight + marginRight + dopLength;
@@ -542,6 +627,7 @@ public class Layout
         var elem = new ImageObject(fileName)
         {
             Map = document.GetMap()[node],
+            HtmlNode = node,
             ObjectType = RenderObjectType.Block,
             LocalPath = fileName
         };

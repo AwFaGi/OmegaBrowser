@@ -1,5 +1,6 @@
 using Browser.CSS;
 using Browser.Networking;
+using HtmlAgilityPack;
 using SkiaSharp;
 
 namespace Browser.Render;
@@ -19,6 +20,12 @@ public class Rect
     public int Height()
     {
         return bottom - top;
+    }
+    
+    public bool Contains(float x, float y)
+    {
+        return x >= left && x <= right &&
+               y >= top && y <= bottom;
     }
 }
 
@@ -68,6 +75,7 @@ public class RenderObject // todo image object
 {
     public Rect Rectangle { get; set; }
     public CSSAttrMap Map { get; set; }
+    public HtmlNode HtmlNode { get; set; }
     public RenderObjectType ObjectType { get; set; }
 
     public List<RenderObjectBackground> BackgroundObjects { get; set; }
@@ -110,6 +118,32 @@ public class TextObject : RenderObject
         }
 
         renderer.drawText(sColor, rect, text, textSize, under);
+    }
+}
+
+public class LinkInfo
+{
+    public string Url { get; }
+    public Rect Bounds { get; }
+
+    public LinkInfo(string url, Rect bounds)
+    {
+        Url = url;
+        Bounds = bounds;
+    }
+}
+
+public class LinkObject : RenderObject
+{
+    public string Url { get; }
+    public LinkObject(string url)
+    {
+        Url = url;
+    }
+
+    public override void DoRender(ObjectRenderer renderer)
+    {
+        renderer.addLink(new LinkInfo(Url, Rectangle));
     }
 }
 

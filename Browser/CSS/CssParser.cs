@@ -15,7 +15,9 @@ public class CssParser
     public static CSSGlobalMap ParseFile(string path)
     {
         StreamReader sr = File.OpenText(path);
-        return Parse(sr);
+        CSSGlobalMap map = Parse(sr);
+        sr.Close();
+        return map;
     }
 
     public static CSSAttrMap ParseInline(string cssString)
